@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -6,7 +9,8 @@ import '../pages/displayDataPage.dart';
 import 'package:date_time_picker/date_time_picker.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
-import '../../../Widget/datetime_picker_widget.dart';
+import '../../Widget/datetime_picker_widget.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 Future<void> WebrtcRoom1() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,21 +45,31 @@ class _WebrtcRoomState extends State<WebrtcRoom> {
   RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
   String roomId;
   TextEditingController textEditingController = TextEditingController(text: '');
+  Timer _timer;
 
   TextEditingController _scheduledDateTimeController;
   String _scheduledDateTimeValueChanged = '';
   String _scheduledDateTimeValueToValidate = '';
   String _scheduledDateTimeValueSaved = '';
 
+  var VCHandled1;
+  var VCHandled2;
+  var loggedIn1;
+  var loggedIn2;
+  var inCall1;
+  var inCall2;
+  bool passed = false;
+
   @override
   void initState() {
-    super.initState();
+    FirebaseFirestore db = FirebaseFirestore.instance;
     Intl.defaultLocale = 'pt_BR';
     _scheduledDateTimeController = TextEditingController(text: DateTime.now().toString());
     //_getDefaultDateTimeValue();
 
-    _localRenderer.initialize();
-    _remoteRenderer.initialize();
+    // _localRenderer.initialize();
+    // _remoteRenderer.initialize();
+    initRenderers();
 
     signaling.onAddRemoteStream = ((stream) {
       _remoteRenderer.srcObject = stream;
@@ -64,13 +78,59 @@ class _WebrtcRoomState extends State<WebrtcRoom> {
 
     // auto open camera & mic
     signaling.openUserMedia(_localRenderer, _remoteRenderer).whenComplete(() {
-      // auto create room
-      signaling.createRoom(_remoteRenderer).then((data) {
-        roomId=data;
-        textEditingController.text = roomId;
-      });
+      // var agent1Active = db.collection('isActive').doc('agent1').get();
+      // var agent2Active = db.collection('isActive').doc('agent2').get();
+      // var handle1;
+      // var login1;
+      // var call1;
+      // var handle2;
+      // var login2;
+      // var call2;
+      //
+      // agent1Active.then((doc){
+      //     var jsonData = jsonEncode(doc.data());
+      //     var parsedJson = jsonDecode(jsonData);
+      //     handle1 = parsedJson['VCHandled'];
+      //     login1 = parsedJson['loggedIn'];
+      //     call1 = parsedJson['inCall'];
+      //     // print('a1 >>>>>' + VCHandled1.toString() + loggedIn1.toString() + inCall1.toString());
+      // });
+      //
+      // agent2Active.then((doc){
+      //     var jsonData = jsonEncode(doc.data());
+      //     var parsedJson = jsonDecode(jsonData);
+      //     handle2 = parsedJson['VCHandled'];
+      //     login2 = parsedJson['loggedIn'];
+      //     call2 = parsedJson['inCall'];
+      //     // print('a2 state >>>>> ' + VCHandled2.toString() + loggedIn2.toString() + inCall2.toString());
+      // });
+      // setState(() {
+      //   VCHandled1 = handle1;
+      //   VCHandled2 = handle2;
+      //   loggedIn1 = login1;
+      //   loggedIn2 = login2;
+      //   inCall1 = call1;
+      //   inCall2 = call2;
+      //   passed = true;
+      // });
     } );
 
+    signaling.createRoom(_remoteRenderer, db).then((data) {
+      _timer = new Timer(const Duration(seconds: 3), (){
+        setState(() {
+          roomId=data;
+        });
+      });
+    });
+
+    // _timer = new Timer(const Duration(seconds: 3), () {
+    //   setState(() {
+    //     signaling.createRoom(_remoteRenderer).then((data) {
+    //       roomId=data;
+    //     });
+    //   });
+    // });
+    super.initState();
   }
 
   @override
@@ -78,6 +138,11 @@ class _WebrtcRoomState extends State<WebrtcRoom> {
     _localRenderer.dispose();
     _remoteRenderer.dispose();
     super.dispose();
+  }
+
+  void initRenderers() async {
+    await _localRenderer.initialize();
+    await _remoteRenderer.initialize();
   }
 
   Future<void> _getDefaultDateTimeValue() async {

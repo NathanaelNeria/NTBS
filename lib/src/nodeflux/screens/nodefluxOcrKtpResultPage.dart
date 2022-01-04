@@ -1516,6 +1516,7 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
         if (value.isEmpty) {
           return 'Please input status perkawinan';
         }
+        return null;
       },
       onSaved: (value) => firestoreMaritalStatus = value,
     );
@@ -1672,14 +1673,14 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
             Icons.mail,
             color: Colors.grey,
           )),
-      validator: (value){
-        isEmail = EmailValidator.validate(value);
-
-        if (value.isEmpty || !isEmail) {
-          return 'Please input a valid email address';
-        }
-        return null;
-      },
+      // validator: (value){
+      //   isEmail = EmailValidator.validate(value);
+      //
+      //   if (value.isEmpty || !isEmail) {
+      //     return 'Please input a valid email address';
+      //   }
+      //   return null;
+      // },
       onSaved: (value) => firestoreEmail = value,
     );
   }
@@ -1694,12 +1695,12 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
             Icons.phone_android,
             color: Colors.grey,
           )),
-      validator: (value) {
-        if (value.isEmpty) {
-          return 'Please phone number';
-        }
-        return null;
-      },
+      // validator: (value) {
+      //   if (value.isEmpty) {
+      //     return 'Please phone number';
+      //   }
+      //   return null;
+      // },
       onSaved: (value) => firestoreMobilePhone = value,
     );
   }

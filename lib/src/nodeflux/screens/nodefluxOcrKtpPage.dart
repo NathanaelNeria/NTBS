@@ -317,10 +317,6 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
           onPressed: () {
 
             _getEktpImage(this.context, ImageSource.camera);
-//        setState(() {
-//          debugPrint("Photo button clicked");
-//
-//        });
           },
         )
     );
@@ -397,18 +393,6 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
 
       if(picture != null) {
         try {
-
-          // final image = decodeImage(picture.readAsBytesSync());
-          //
-          // // Resize the image to a 120x? thumbnail (maintaining the aspect ratio).
-          // final resizedImage = copyResize(image, width: 120);
-          //
-          // //File('thumbnail.png').writeAsBytesSync(encodePng(resizedImage));
-          // await File(resultPath).writeAsBytesSync(encodePng(resizedImage));
-          //
-          // int resultLength=resultPath.lengthSync();
-
-// comment start
           var result = await FlutterImageCompress.compressAndGetFile(
             picture.absolute.path, resultPath,
             quality: photoQuality,
@@ -770,16 +754,7 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
     double livenessValue;
 
     try{
-      // var data = "images: ["+ base64Image +"]";
-
-      //var uri = Uri.parse('https://api.cloud.nodeflux.io/v1/analytics/ocr-ktp');
-      //var url='https://api.cloud.nodeflux.io/v1/analytics/ocr-ktp';
       var url='https://api.cloud.nodeflux.io/syncv2/analytics/face-match-liveness';
-      // var response = http.post(uri, headers: {
-      //   "Content-Type": "application/json",
-      //   "x-nodeflux-timestamp": "20201110T135945Z",
-      //       "Authorization": authorization,
-      // }, body:data).then((http.Response response) {});
       List<String> photoBase64List=List<String>();
       photoBase64List.add(base64ImageEktp);
       photoBase64List.add(base64ImageSelfie);
@@ -1344,7 +1319,7 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
                     Text(matchLivenessFeedback,
                         style: new TextStyle(fontSize: 12.0, color: Colors.black)):Container(),
                     (_ektpImage!=null && _nodefluxResult2Model!=null
-                        && _selfieImage != null
+                        && _selfieImage != null && similarityValue >= 0.75 && livenessValue >= 0.75
                         //&& (isLive!=null || isMatched!=null)
                     )?RaisedButton(
                       onPressed: goToResultPage,
@@ -1353,125 +1328,21 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
                           'Next',
                           style: TextStyle(color: Colors.white, fontSize: 20)),
                       color: Colors.orange,
-                    ):Container(),
-
-
-                    // Add TextFormFields and ElevatedButton here.
-                    // buildTextFormFieldName(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldNik(),
-                    // buildTextFormFieldBirthplace(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldBirthdate(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldAddress(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldRtRw(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldKelurahanDesa(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldKecamatan(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldKabupatenKota(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldProvince(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldReligion(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldMaritalStatus(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldWorkfield(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldExpiry(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldBloodType(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldNationality(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldEmail(),
-                    // SizedBox(height: 15),
-                    // buildTextFormFieldMobilePhone(),
-                    //
-                    // // Row(
-                    // //     children: <Widget> [showUploadEktpButton(),
-                    //
-                    // //     ]
-                    // // ),
-                    // // Row(
-                    // //     children: <Widget> [
-                    // //       (_ektpImage!=null)?Text('eKTP Uploaded',
-                    // //           style: new TextStyle(fontSize: 12.0, color: Colors.black)):Container(),
-                    // //       (_npwpImage!=null)?Text('NPWP Photo Uploaded',
-                    // //           style: new TextStyle(fontSize: 12.0, color: Colors.white)):Container()
-                    // //     ]
-                    // // ),
-                    //
-                    // Row (
-                    //     children: <Widget> [
-                    //       showUploadNpwpButton(),
-                    //       showUploadSelfieButton(),
-                    //     ]
-                    // ),
-                    // showUploadSelfieEktpButton(),
+                    ):showDialog<String>(
+                      context: context,
+                      builder: (BuildContext context) => AlertDialog(
+                        title: const Text('Liveness too low or face doesn\'t match'),
+                        content: const Text('Please try again'),
+                        actions: <Widget>[
+                          // TextButton()
+                        ],
+                      )
+                    ),
                   ],
                 )
-
-
             ),
-            //SizedBox(height: 15),
-            // Row (
-            //   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            //   children: <Widget>[
-            //     //           InkWell(
-            //     //           onTap: () {
-            //     // createData;
-            //     // },
-            //     //     child:Container(
-            //     //       width: MediaQuery.of(context).size.width,
-            //     //       padding: EdgeInsets.symmetric(vertical: 15),
-            //     //       alignment: Alignment.center,
-            //     //       decoration: BoxDecoration(
-            //     //           borderRadius: BorderRadius.all(Radius.circular(5)),
-            //     //           boxShadow: <BoxShadow>[
-            //     //             BoxShadow(
-            //     //                 color: Colors.grey.shade200,
-            //     //                 offset: Offset(2, 4),
-            //     //                 blurRadius: 5,
-            //     //                 spreadRadius: 2)
-            //     //           ],
-            //     //           gradient: LinearGradient(
-            //     //               begin: Alignment.centerLeft,
-            //     //               end: Alignment.centerRight,
-            //     //               colors: [Color(0xfffbb448), Color(0xfff7892b)])),
-            //     //       child: Text(
-            //     //         'Ok Saya Siap Melakukan Video Call',
-            //     //         style: TextStyle(fontSize: 20, color: Colors.white),
-            //     //       ),
-            //     //     )
-            //     // ),
-            //
-            //     RaisedButton(
-            //       onPressed: createData,
-            //       child: Text('Ok Saya Siap Melakukan Video Call', style: TextStyle(color: Colors.white, fontSize: 20)),
-            //       color: Colors.orange,
-            //     ),
-            //
-            //
-            //   ],
-            // ),
-            // StreamBuilder<QuerySnapshot>(
-            //   stream: db.collection('form').snapshots(),
-            //   builder: (context, snapshot){
-            //     if (snapshot.hasData) {
-            //       return Column(children:snapshot.data.documents.map((doc)=> buildItem(doc)).toList());
-            //     } else {
-            //       return SizedBox();
-            //     }
-            //   }
-            // )
           ],
         )
-      // firestore end
     );
   }
 
@@ -1742,7 +1613,7 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
         controller:rtrwController,
         //maxLength: 16,
       decoration: new InputDecoration(
-          hintText: 'RT / RW',
+          hintText: 'RT/RW',
           icon: new Icon(
             Icons.map,
             color: Colors.grey,
