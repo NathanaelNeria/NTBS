@@ -29,8 +29,9 @@ import 'dart:convert';
 import 'nodefluxOcrKtpResultPage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import '../../webrtc_room/webrtc_room.dart';
-import '../models/modelLivenessNathan.dart';
 import '../models/livenessUnderqualified.dart';
+import '../models/messageModel.dart';
+import '../models/modelLivenessNathan.dart';
 //import 'package:image/image.dart';
 
 
@@ -96,6 +97,7 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
   NodefluxResult2Model _nodefluxResult2Model;
   bool isLive;
   bool isMatched;
+  bool nodefluxPassed;
   double livenessValue;
   double similarityValue;
   String matchLivenessFeedback="";
@@ -108,7 +110,6 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
       db = FirebaseFirestore.instance;
       print("completed");
       setup();
-      setState(() {});
     });
 
   }
@@ -134,10 +135,11 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
     _ektpImage=null;
     _selfieImage=null;
     _nodefluxResult2Model=null;
-    isLive=null;
-    isMatched=null;
-    livenessValue=0.0;
-    similarityValue=0.0;
+    isLive=false;
+    isMatched=false;
+    livenessValue = null;
+    similarityValue= null;
+    nodefluxPassed = false;
     matchLivenessFeedback="";
   }
 
@@ -747,15 +749,11 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
     bool isPassed=false;
     String currentStatus='';
     NodefluxDataModelSync2 nodefluxDataModelSync2=NodefluxDataModelSync2();
-    NodefluxFaceLivenessModel nodefluxFaceLiveness = NodefluxFaceLivenessModel();
-    NodefluxFaceMatchModel nodefluxFaceMatch = NodefluxFaceMatchModel();
-    LivenessModel livenessModel = LivenessModel();
     LivenessModelUnderqualified livenessModelUnderqualified = LivenessModelUnderqualified();
-    // NodefluxJobModel nodefluxJobModel=NodefluxJobModel();
-    // NodefluxResultModel nodefluxResultModel = NodefluxResultModel();
-    //NodefluxResult2Model nodefluxResult2Model=NodefluxResult2Model();
-    bool okValue=true;
-    double livenessValue;
+    MessageModel messageModel = MessageModel();
+    LivenessModel livenessModel = LivenessModel();
+
+    bool okValue=false;
 
     try{
       var url='https://api.cloud.nodeflux.io/syncv2/analytics/face-match-liveness';
@@ -776,47 +774,53 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
 
         var respbody=response.body;
         // first check ok value
-        livenessModel = LivenessModel.fromJson(jsonDecode(response.body));
-        livenessModelUnderqualified = LivenessModelUnderqualified.fromJson(jsonDecode(response.body));
-        var message = livenessModel.message;
-        // nodefluxDataModelSync2=NodefluxDataModelSync2.fromJson000(jsonDecode(response.body));
-        // okValue=nodefluxDataModelSync2.ok;
+        messageModel = MessageModel.fromJson(jsonDecode(response.body));
+        var message = messageModel.message;
+        okValue = messageModel.ok;
+        var status = messageModel.status;
+        print(message + ' ' + okValue.toString());
         // second, if ok false, exit; if ok true, check status [success or incompleted]
         if (okValue) {
-          // nodefluxDataModelSync2=NodefluxDataModelSync2.fromJson00(jsonDecode(response.body));
-          // currentStatus=nodefluxDataModelSync2.status;
-          currentStatus=NodefluxDataModelSync2.fromJson00(jsonDecode(response.body)).status;
+          currentStatus= status;
           // third, if status: success, ada liveness -> check liveness > live
 
 
           if (currentStatus == "success") {
-            if(message == 'Face Liveness Underqualified'){
+            if(message != 'Face Match Liveness Success'){
+              livenessModelUnderqualified = LivenessModelUnderqualified.fromJson(jsonDecode(response.body));
               livenessValue = livenessModelUnderqualified.result[0].faceLiveness.liveness;
               isLive = livenessModelUnderqualified.result[0].faceLiveness.live;
 
+              print(isLive);
+
               double livenessPercentage=livenessValue*100;
-              String isLiveString = (livenessPercentage>=75)? "from live": "not from live";
-              matchLivenessFeedback= "Selfie is taken " + isLiveString +"person ("+livenessPercentage.toStringAsFixed(2)+" %)! Please try again";
-              _nodefluxResult2Model.face_liveness=new NodefluxFaceLivenessModel();
-              _nodefluxResult2Model.face_liveness.live=isLive;
-              _nodefluxResult2Model.face_liveness.liveness=livenessValue;
-              setState(() {});
+              String isLiveString = (livenessPercentage>=75)? "from live ": "not from live ";
+              matchLivenessFeedback= "Selfie is taken " + isLiveString +"person ("+livenessPercentage.toStringAsFixed(2)+" %)!";
+              matchLivenessFeedback+= '\nPlease try again';
             }
             else if(message == 'Face Match Liveness Success'){
-              similarityValue = livenessModel.result[0].faceMatch.similarity;
-              isMatched = livenessModel.result[0].faceMatch.match;
-              livenessValue = livenessModel.result[0].faceLiveness.liveness;
-              isLive = livenessModel.result[0].faceLiveness.live;
-
-              print(isMatched);
+              livenessModel = LivenessModel.fromJson(jsonDecode(response.body));
+              setState(() {
+                similarityValue = livenessModel.result[1].faceMatch.similarity;
+                isMatched = livenessModel.result[1].faceMatch.match;
+                livenessValue = livenessModel.result[0].faceLiveness.liveness;
+                isLive = livenessModel.result[0].faceLiveness.live;
+                nodefluxPassed = true;
+              });
 
               double similarityPercentage=similarityValue*100;
-              String isMatchedString = (similarityValue>=75)? "matched": "not matched";
+              double livenessPercentage=livenessValue*100;
+              String isLiveString = (livenessPercentage>=75)? "from live ": "not from live ";
+              String isMatchedString = (similarityPercentage>=75)? "matched": "not matched";
+              matchLivenessFeedback = "Selfie is taken " + isLiveString +"person ("+livenessPercentage.toStringAsFixed(2)+" %)";
               matchLivenessFeedback+= "\neKTP photo is " + isMatchedString +" with selfie ("+similarityPercentage.toStringAsFixed(2)+" %)";
-              _nodefluxResult2Model.face_match=new NodefluxFaceMatchModel();
 
-              _nodefluxResult2Model.face_match.match=isMatched;
-              _nodefluxResult2Model.face_match.similarity=similarityValue;
+              if(_ektpImage!=null && _nodefluxResult2Model!=null
+                  && _selfieImage != null && similarityValue >= 0.75 && livenessValue >= 0.75){
+                print('button >>> ' + true.toString());
+              }
+
+              print(similarityValue.toString() + ' ' + livenessValue.toString());
             }
 
 
@@ -1308,16 +1312,18 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
                     (matchLivenessFeedback!="")?
                     Text(matchLivenessFeedback,
                         style: new TextStyle(fontSize: 12.0, color: Colors.black)):Container(),
-                    (_ektpImage!=null && _nodefluxResult2Model!=null
-                        && _selfieImage != null && similarityValue >= 0.75 && livenessValue >= 0.75
-                        //&& (isLive!=null || isMatched!=null)
+                    (similarityValue != null && livenessValue != null && _ektpImage!=null && _nodefluxResult2Model!=null
+                        && _selfieImage != null
                     )?RaisedButton(
                       onPressed: goToResultPage,
                       child: Text(
                           'Next',
                           style: TextStyle(color: Colors.white, fontSize: 20)),
                       color: Colors.orange,
-                    ): Container()
+                    ):Container(
+                        child: (nodefluxPassed && similarityValue != null && livenessValue != null
+                            && similarityValue <= 0.75 && livenessValue <= 0.75)? Container():Text('You do not pass the liveness or facematch')
+                    ),
                   ],
                 )
             ),
