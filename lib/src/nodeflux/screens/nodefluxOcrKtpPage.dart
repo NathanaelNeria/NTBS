@@ -21,9 +21,6 @@ import '../models/nodeflux_data_model_sync2.dart';
 import '../models/nodeflux_job_model.dart';
 import '../models/nodeflux_result_model.dart';
 import '../models/nodeflux_result2_model.dart';
-import '../models/nodeflux_face_liveness_model.dart';
-import '../models/nodeflux_face_match_model.dart';
-
 import 'dart:convert';
 
 import 'nodefluxOcrKtpResultPage.dart';
@@ -32,8 +29,8 @@ import '../../webrtc_room/webrtc_room.dart';
 import '../models/livenessUnderqualified.dart';
 import '../models/messageModel.dart';
 import '../models/modelLivenessNathan.dart';
-//import 'package:image/image.dart';
-
+import '../models/face_pair_not_match.dart';
+import '../models/no_face_detected.dart';
 
 class NodefluxOcrKtpPage extends StatefulWidget {
   NodefluxOcrKtpPage({Key key, this.title}) : super(key: key);
@@ -97,10 +94,14 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
   NodefluxResult2Model _nodefluxResult2Model;
   bool isLive;
   bool isMatched;
-  bool nodefluxPassed;
+  bool nodefluxSelfie = false;
   double livenessValue;
   double similarityValue;
   String matchLivenessFeedback="";
+  String message = '';
+  bool noFace = false;
+  bool underQualified = false;
+  bool changeColor = false;
 
   @override
   void initState() {
@@ -139,7 +140,6 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
     isMatched=false;
     livenessValue = null;
     similarityValue= null;
-    nodefluxPassed = false;
     matchLivenessFeedback="";
   }
 
@@ -269,12 +269,13 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
             textStyle: Theme.of(context).textTheme.display1,
             fontSize: 30,
             fontWeight: FontWeight.w700,
-            color: Color(0xffe46b10),
+            // color: Color(0xffe46b10),
+            color: Colors.white
           ),
           children: [
             TextSpan(
               text: 'Information',
-              style: TextStyle(color: Colors.black, fontSize: 30),
+              style: TextStyle(color: Colors.white, fontSize: 30),
             ),
             // TextSpan(
             //   text: 'Form',
@@ -290,19 +291,19 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
         padding: EdgeInsets.fromLTRB(10.0, 30.0, 10.0, 0.0),
         child: SizedBox(
           height: 40.0,
-          child: new RaisedButton(
-            elevation: 5.0,
-            shape: new RoundedRectangleBorder(
-                borderRadius: new BorderRadius.circular(30.0)),
-            color: Colors.lightBlue,
+          child: new ElevatedButton(
             child: new Text(
                 //'Ambil Foto Selfie',
               'Take Selfie Photo',
                 style: new TextStyle(fontSize: 12.0, color: Colors.white)),
             //onPressed: () { navigateToPage('Login Face');}
             onPressed: () {
+              nodefluxSelfie? changeColor :
               _getSelfieImage(this.context, ImageSource.camera);
             },
+            style: ElevatedButton.styleFrom(
+              primary: changeColor? Colors.grey : Colors.transparent
+            )
           ),
         ));
   }
@@ -752,7 +753,8 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
     LivenessModelUnderqualified livenessModelUnderqualified = LivenessModelUnderqualified();
     MessageModel messageModel = MessageModel();
     LivenessModel livenessModel = LivenessModel();
-
+    FacePairNotMatch facePairNotMatch = FacePairNotMatch();
+    NoFaceDetected noFaceDetected = NoFaceDetected();
     bool okValue=false;
 
     try{
@@ -775,7 +777,7 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
         var respbody=response.body;
         // first check ok value
         messageModel = MessageModel.fromJson(jsonDecode(response.body));
-        var message = messageModel.message;
+        message = messageModel.message;
         okValue = messageModel.ok;
         var status = messageModel.status;
         print(message + ' ' + okValue.toString());
@@ -786,17 +788,21 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
 
 
           if (currentStatus == "success") {
-            if(message != 'Face Match Liveness Success'){
+            if(message == 'Face Liveness Underqualified'){
               livenessModelUnderqualified = LivenessModelUnderqualified.fromJson(jsonDecode(response.body));
-              livenessValue = livenessModelUnderqualified.result[0].faceLiveness.liveness;
-              isLive = livenessModelUnderqualified.result[0].faceLiveness.live;
-
-              print(isLive);
+              setState(() {
+                livenessValue = livenessModelUnderqualified.result[0].faceLiveness.liveness;
+                isLive = livenessModelUnderqualified.result[0].faceLiveness.live;
+                underQualified = true;
+                nodefluxSelfie = true;
+                changeColor = true;
+              });
 
               double livenessPercentage=livenessValue*100;
               String isLiveString = (livenessPercentage>=75)? "from live ": "not from live ";
-              matchLivenessFeedback= "Selfie is taken " + isLiveString +"person ("+livenessPercentage.toStringAsFixed(2)+" %)!";
-              matchLivenessFeedback+= '\nPlease try again';
+              matchLivenessFeedback= "Selfie is taken " + isLiveString +"person!";
+              matchLivenessFeedback+= '\nOR';
+              matchLivenessFeedback+= '\nLow photo quality';
             }
             else if(message == 'Face Match Liveness Success'){
               livenessModel = LivenessModel.fromJson(jsonDecode(response.body));
@@ -805,7 +811,8 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
                 isMatched = livenessModel.result[1].faceMatch.match;
                 livenessValue = livenessModel.result[0].faceLiveness.liveness;
                 isLive = livenessModel.result[0].faceLiveness.live;
-                nodefluxPassed = true;
+                nodefluxSelfie = true;
+                changeColor = true;
               });
 
               double similarityPercentage=similarityValue*100;
@@ -814,16 +821,25 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
               String isMatchedString = (similarityPercentage>=75)? "matched": "not matched";
               matchLivenessFeedback = "Selfie is taken " + isLiveString +"person ("+livenessPercentage.toStringAsFixed(2)+" %)";
               matchLivenessFeedback+= "\neKTP photo is " + isMatchedString +" with selfie ("+similarityPercentage.toStringAsFixed(2)+" %)";
-
-              if(_ektpImage!=null && _nodefluxResult2Model!=null
-                  && _selfieImage != null && similarityValue >= 0.75 && livenessValue >= 0.75){
-                print('button >>> ' + true.toString());
-              }
-
-              print(similarityValue.toString() + ' ' + livenessValue.toString());
             }
+            else if(message == "The Face Pair Not Match"){
+              facePairNotMatch = FacePairNotMatch.fromJson(jsonDecode(response.body));
+              setState(() {
+                similarityValue = facePairNotMatch.result[1].faceMatch.similarity;
+                livenessValue = facePairNotMatch.result[0].faceLiveness.liveness;
+                isMatched = facePairNotMatch.result[1].faceMatch.match;
+                isLive = facePairNotMatch.result[0].faceLiveness.live;
+                nodefluxSelfie = true;
+                changeColor = true;
+              });
 
-
+              double similarityPercentage=similarityValue*100;
+              double livenessPercentage=livenessValue*100;
+              String isLiveString = (livenessPercentage>=75)? "from live ": "not from live ";
+              String isMatchedString = (similarityPercentage>=75)? "matched": "not matched";
+              matchLivenessFeedback = "Selfie is taken " + isLiveString +"person ("+livenessPercentage.toStringAsFixed(2)+" %)";
+              matchLivenessFeedback+= "\neKTP photo is " + isMatchedString +" with selfie ("+similarityPercentage.toStringAsFixed(2)+" %)";
+            }
             // if (resultListSize==2) { // kalau ada liveness dan match
             //
             //
@@ -895,10 +911,14 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
             //   isPassed=false;
             //   matchLivenessFeedback+= "selfie is not taken from live person ("+nodefluxFaceLiveness.liveness.toString()+" %)";
             // }
-          } else { // (third), if status: incompleted, berhenti
-            dialog=nodefluxDataModelSync2.message;
-            isPassed=false;
-            matchLivenessFeedback=nodefluxDataModelSync2.message;
+          } else {
+            noFaceDetected = NoFaceDetected.fromJson(jsonDecode(response.body));
+            matchLivenessFeedback = noFaceDetected.message;
+            setState(() {
+              message = noFaceDetected.message;
+              noFace = true;
+              changeColor = true;
+            });
           }
         } else {
           dialog=nodefluxDataModelSync2.message;
@@ -1040,19 +1060,18 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
         padding: EdgeInsets.fromLTRB(10.0, 30.0, 10.0, 0.0),
         child: SizedBox(
           height: 40.0,
-          child: new RaisedButton(
-            elevation: 5.0,
-            shape: new RoundedRectangleBorder(
-                borderRadius: new BorderRadius.circular(30.0)),
-            color: Colors.lightBlue,
+          child: new ElevatedButton(
             child: new Text(
                 //'Ambil Foto eKTP',
               'Take eKTP Photo',
                 style: new TextStyle(fontSize: 12.0, color: Colors.white)),
             //onPressed: () { navigateToPage('Login Face');}
             onPressed:  () {
-              _getEktpImage(this.context, ImageSource.camera);
+              nodefluxSelfie? changeColor: _getEktpImage(this.context, ImageSource.camera);
             },
+            style: ElevatedButton.styleFrom(
+              primary: changeColor? Colors.grey : Colors.transparent
+            ),
           ),
         ));
   }
@@ -1062,17 +1081,16 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
         padding: EdgeInsets.fromLTRB(10.0, 30.0, 10.0, 0.0),
         child: SizedBox(
           height: 40.0,
-          child: new RaisedButton(
-            elevation: 5.0,
-            shape: new RoundedRectangleBorder(
-                borderRadius: new BorderRadius.circular(30.0)),
-            color: Colors.lightBlue,
+          child: new ElevatedButton(
             child: new Text('Foto Selfie dg eKTP Bawah Dagu',
                 style: new TextStyle(fontSize: 12.0, color: Colors.white)),
             //onPressed: () { navigateToPage('Login Face');}
             onPressed:  () {
               _getSelfieEktpImage(this.context, ImageSource.camera);
             },
+            style: ElevatedButton.styleFrom(
+              primary: Colors.lightBlue
+            ),
           ),
         ));
   }
@@ -1290,45 +1308,107 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
     final height = MediaQuery.of(context).size.height;
     return Scaffold(
         body:
-        // firestore start
-        ListView(
-          padding: EdgeInsets.all(8),
-          children: <Widget>[
-            Form(
-                key: _formKey,
-                child: Column (
-                  children: <Widget>[
-                    SizedBox(height: 60),
-                    _title(),
-
-                    showUploadEktpButton(),
-                    (_ektpImage!=null && _nodefluxResult2Model==null)?Text('Processing.. Please wait a moment..',
-                        style: new TextStyle(fontSize: 12.0, color: Colors.black)):Container(),
-                    (_ektpImage!=null && _nodefluxResult2Model!=null)?Text('eKTP Processed',
-                        style: new TextStyle(fontSize: 12.0, color: Colors.black)):Container(),
-                    SizedBox(height: 20),
-                    (_ektpImage!=null && _nodefluxResult2Model!=null)?showUploadSelfieButton():Container(),
-                    SizedBox(height: 20),
-                    (matchLivenessFeedback!="")?
-                    Text(matchLivenessFeedback,
-                        style: new TextStyle(fontSize: 12.0, color: Colors.black)):Container(),
-                    (similarityValue != null && livenessValue != null && _ektpImage!=null && _nodefluxResult2Model!=null
-                        && _selfieImage != null
-                    )?RaisedButton(
-                      onPressed: goToResultPage,
-                      child: Text(
-                          'Next',
-                          style: TextStyle(color: Colors.white, fontSize: 20)),
-                      color: Colors.orange,
-                    ):Container(
-                        child: (nodefluxPassed && similarityValue != null && livenessValue != null
-                            && similarityValue <= 0.75 && livenessValue <= 0.75)? Container():Text('You do not pass the liveness or facematch')
-                    ),
+            Container(
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.all(Radius.circular(5)),
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                        color: Colors.grey.shade200,
+                        offset: Offset(2, 4),
+                        blurRadius: 5,
+                        spreadRadius: 2)
                   ],
-                )
-            ),
-          ],
-        )
+                  gradient: LinearGradient(
+                      begin: Alignment.bottomLeft,
+                      end: Alignment.topRight,
+                      // colors: [Color(0xfffbb448), Color(0xffe46b10)]
+                      colors: [Colors.green, Colors.green[600], Colors.green[700], Colors.green[800]]
+                  )
+              ),
+              child: ListView(
+                padding: EdgeInsets.all(8),
+                children: <Widget>[
+                  Form(
+                      key: _formKey,
+                      child: Column (
+                        children: <Widget>[
+                          SizedBox(height: 60),
+                          _title(),
+
+                          showUploadEktpButton(),
+                          (_ektpImage!=null && _nodefluxResult2Model==null)?Text('Processing.. Please wait a moment..',
+                              style: new TextStyle(fontSize: 12.0, color: Colors.white)):Container(),
+                          (_ektpImage!=null && _nodefluxResult2Model!=null)?Text('eKTP Processed',
+                              style: new TextStyle(fontSize: 12.0, color: Colors.white)):Container(),
+                          SizedBox(height: 20),
+                          (_ektpImage!=null && _nodefluxResult2Model!=null)?showUploadSelfieButton():Container(),
+                          SizedBox(height: 20),
+                          (matchLivenessFeedback!="")?
+                          Text(matchLivenessFeedback,
+                            style: new TextStyle(fontSize: 12.0, color: Colors.white),
+                            textAlign: TextAlign.center,
+                          ):Container(),
+                          SizedBox(height:20),
+                          (similarityValue != null && livenessValue != null && _ektpImage!=null && _nodefluxResult2Model!=null
+                              && _selfieImage != null && similarityValue >= 0.75 && livenessValue >= 0.75
+                          )?RaisedButton(
+                            onPressed: goToResultPage,
+                            child: Text(
+                                'Next',
+                                style: TextStyle(color: Colors.white, fontSize: 20)),
+                            color: Colors.transparent,
+                          ):Container(
+                              child: (noFace && message == 'No face detected')?
+                              RaisedButton(
+                                onPressed: (){
+                                  Navigator.pop(context);
+                                },
+                                color: Colors.teal,
+                                child: Text('Try again',
+                                    style: TextStyle(color: Colors.white, fontSize: 20)
+                                ),
+                              )
+                                  :
+                              ((nodefluxSelfie)?
+                              ((underQualified)?
+                              RaisedButton(
+                                onPressed: (){
+                                  Navigator.pop(context);
+                                },
+                                color: Colors.teal,
+                                child: Text('Try again',
+                                    style: TextStyle(color: Colors.white, fontSize: 20)
+                                ),
+                              )
+                                  :
+                              ((similarityValue < 75 && livenessValue < 75)? Column(
+                                children: [
+                                  Text('Liveness or face match do not pass the requirement',
+                                    style: TextStyle(fontSize: 15.0, color: Colors.red),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  SizedBox(height: 10),
+                                  ElevatedButton(
+                                    onPressed: (){
+                                      Navigator.pop(context);
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                        primary: Colors.teal
+                                    ),
+                                    child: Text('Try again',
+                                        style: TextStyle(color: Colors.white, fontSize: 20)
+                                    ),
+                                  )
+                                ],
+                              ):Container())) : Container())
+                          ),
+                        ],
+                      )
+                  ),
+                ],
+              ),
+            )
+
     );
   }
 
