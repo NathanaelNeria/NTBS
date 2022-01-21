@@ -268,7 +268,7 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
       text: TextSpan(
           text: 'eKTP & Contact ',
           style: GoogleFonts.portLligatSans(
-            textStyle: Theme.of(context).textTheme.display1,
+            textStyle: Theme.of(context).textTheme.headline4,
             fontSize: 30,
             fontWeight: FontWeight.w700,
             // color: Color(0xffe46b10),
@@ -547,7 +547,7 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
         else if(nodefluxResultModel.status == 'incompleted' && nodefluxDataModel.message != "OCR_KTP Service Success"){
           setState(() {
             ktpDetected = 'ktp ga ada';
-            ktpProcessed = true;
+            ktpProcessed = false;
           });
         }
       }
@@ -989,7 +989,8 @@ class _NodefluxOcrKtpPageState extends State<NodefluxOcrKtpPage> {
                 style: new TextStyle(fontSize: 12.0, color: Colors.white)),
             //onPressed: () { navigateToPage('Login Face');}
             onPressed:  () {
-              Navigator.pop(context);
+              _getEktpImage(this.context, ImageSource.camera);
+              ktpDetected = '';
             },
             style: ElevatedButton.styleFrom(
                 primary: changeColor? Colors.red : Colors.red

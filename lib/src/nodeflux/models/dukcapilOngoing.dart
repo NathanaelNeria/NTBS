@@ -1,7 +1,3 @@
-// To parse this JSON data, do
-//
-//     final dukcapilOngoing = dukcapilOngoingFromJson(jsonString);
-
 import 'dart:convert';
 
 DukcapilOngoing dukcapilOngoingFromJson(String str) => DukcapilOngoing.fromJson(json.decode(str));

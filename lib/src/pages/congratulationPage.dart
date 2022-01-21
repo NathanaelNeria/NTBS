@@ -82,7 +82,7 @@ class _CongratulationPageState extends State<CongratulationPage> {
       text: TextSpan(
           text: 'NTB Syariah',
           style: GoogleFonts.portLligatSans(
-            textStyle: Theme.of(context).textTheme.display1,
+            textStyle: Theme.of(context).textTheme.headline4,
             fontSize: 30,
             fontWeight: FontWeight.w700,
             color: Colors.white,
@@ -181,11 +181,11 @@ class _CongratulationPageState extends State<CongratulationPage> {
                     SizedBox(
                       height: 20,
                     ),
-                    Text(
-                      //'Silahkan bapak/ibu cek di email tsb untuk melihat hasil verifikasi dari pihak Bank dalam 24 jam',
-                      'Please keep checking your email above to follow up NTBS verification process within 24 hours',
-                      style: TextStyle(color: Colors.white, fontSize: 17), textAlign: TextAlign.left,
-                    ),
+                    // Text(
+                    //   //'Silahkan bapak/ibu cek di email tsb untuk melihat hasil verifikasi dari pihak Bank dalam 24 jam',
+                    //   'Please keep checking your email above to follow up NTBS verification process within 24 hours',
+                    //   style: TextStyle(color: Colors.white, fontSize: 17), textAlign: TextAlign.left,
+                    // ),
                     SizedBox(
                       height: 20,
                     ),

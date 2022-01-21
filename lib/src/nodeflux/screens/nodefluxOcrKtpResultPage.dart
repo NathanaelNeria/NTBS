@@ -3,6 +3,7 @@ import 'package:flutter_webrtc_demo/src/nodeflux/models/dukcapilFail.dart';
 import 'package:flutter_webrtc_demo/src/nodeflux/models/dukcapilOngoing.dart';
 import 'package:flutter_webrtc_demo/src/nodeflux/screens/coreBankingPageNTBS.dart';
 import 'package:flutter_webrtc_demo/src/pages/congratulationPage.dart';
+import 'package:flutter_webrtc_demo/src/pages/prepPage.dart';
 import 'package:flutter_webrtc_demo/src/pages/welcomePage.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -121,8 +122,9 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
   String ktpDetected = '';
   Color textColorRed = Colors.red;
   String messageDukcapil = '';
-  bool dukcapil = true;
+  bool dukcapil = false;
   String selfieProcessed = '';
+  String dukcapilStatus = '';
 
   @override
   void initState() {
@@ -277,7 +279,7 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
       text: TextSpan(
           text: 'eKTP & Contact ',
           style: GoogleFonts.portLligatSans(
-            textStyle: Theme.of(context).textTheme.display1,
+            textStyle: Theme.of(context).textTheme.headline4,
             fontSize: 30,
             fontWeight: FontWeight.w700,
             // color: Color(0xffe46b10),
@@ -311,7 +313,7 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
                   'Take Selfie Photo',
                   style: new TextStyle(fontSize: 12.0, color: Colors.white)),
               onPressed: () {
-                // nodefluxSelfie? changeColor :
+                nodefluxSelfie? changeColor :
                 _getSelfieImage(this.context, ImageSource.camera);
               },
               style: ElevatedButton.styleFrom(
@@ -462,6 +464,7 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
         var status = dukcapilOngoing.job.result.status;
         if(okValue){
           currentStatus = status;
+          dukcapilStatus = status;
         }
       }
 
@@ -472,13 +475,13 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
               messageDukcapil = dukcapilFaceMatch.message;
               nodefluxSelfie = true;
               changeColor = true;
-              dukcapil = false;
+              dukcapil = true;
               selfieProcessed = 'selfie ada';
             });
 
             double similarityPercentage=similarityValue*100;
             String isMatchedString = (similarityPercentage>=75)? "matched": "not matched";
-            matchLivenessFeedback += "\neKTP photo is " + isMatchedString +" with selfie ("+similarityPercentage.toStringAsFixed(2)+" %)";
+            matchLivenessFeedback += "\nDukcapil verification face " + isMatchedString +" ("+similarityPercentage.toStringAsFixed(2)+" %)";
           }
           else if(currentStatus == 'failed' || currentStatus == 'incompleted'){
             dukcapilFail = DukcapilFail.fromJson(jsonDecode(response.body));
@@ -492,7 +495,7 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
             });
 
             if(messageDukcapil == 'Please ensure image format is JPEG, or NIK is registered on Dukcapil'){
-              matchLivenessFeedback += "\nNIK doesn't match with face or NIK not registered on Dukcapil";
+              matchLivenessFeedback += "\nNIK doesn't match with face or NIK not registered on Dukcapil, please check your NIK";
             }
             else if(messageDukcapil == "NIK is not found, please check your NIK"){
               matchLivenessFeedback += '\n$messageDukcapil';
@@ -582,6 +585,7 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
             matchLivenessFeedback= "Selfie is taken " + isLiveString +"person!";
             matchLivenessFeedback+= '\nOR';
             matchLivenessFeedback+= '\nLow photo quality';
+            matchLivenessFeedback += '\nLiveness Percentage (' + livenessPercentage.toStringAsFixed(2) + '%)';
           }
           else if(message == 'Face Match Liveness Success'){
             livenessModel = LivenessModel.fromJson(jsonDecode(response.body));
@@ -876,8 +880,13 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
                 style: new TextStyle(fontSize: 12.0, color: Colors.white)),
             //onPressed: () { navigateToPage('Login Face');}
             onPressed:  () {
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => WebrtcRoom()));
+              // Navigator.of(context).push(MaterialPageRoute(
+              //     builder: (context) => PrepPage()));
+              _getSelfieImage(this.context, ImageSource.camera);
+              matchLivenessFeedback = "";
+              selfieProcessed = "";
+              message = "";
+              underQualified = false;
             },
             style: ElevatedButton.styleFrom(
                 primary: changeColor? Colors.red : Colors.red
@@ -949,7 +958,7 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
                           SizedBox(height: 10),
                           (matchLivenessFeedback!="")?
                           Container(
-                            child: (messageDukcapil != '' || selfieProcessed == 'selfie ada')? Container(
+                            child: (dukcapilStatus != '' && selfieProcessed == 'selfie ada')? Container(
                                 child: (message == 'Face Match Liveness Success' && messageDukcapil == 'Dukcapil Validation Success')? Text(matchLivenessFeedback,
                                   style: new TextStyle(fontSize: 12.0, color: Colors.black),
                                   textAlign: TextAlign.center,
@@ -959,8 +968,8 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
                                 )
                             ):Container(),
                           ):Container(),
-                          (similarityValue != null && livenessValue != null && messageDukcapil != '' &&
-                              _selfieImage != null && similarityValue >= 0.75 && livenessValue >= 0.55
+                          (similarityValue != null && livenessValue != null && dukcapilStatus == 'success' &&
+                              _selfieImage != null && similarityValue >= 0.75 && livenessValue >= 0.75
                           )?
                           InkWell(
                               onTap: createData,
@@ -987,33 +996,15 @@ class _NodefluxOcrKtpResultPageState extends State<NodefluxOcrKtpResultPage> {
                               ((nodefluxSelfie)?
                               ((underQualified)? tryAgainButton()
                                   :
-                              ((similarityValue < 75 && livenessValue < 75 && messageDukcapil != '')? Column(
+                              ((similarityValue < 75 && livenessValue < 75 && dukcapilStatus != 'success' && selfieProcessed == 'selfie ada')? Column(
                                 children: [
-                                  SizedBox(height: 5),
+                                  SizedBox(height: 10),
                                   Text('Liveness or face match do not pass the requirement',
                                     style: TextStyle(fontSize: 15.0, color: Colors.red),
                                     textAlign: TextAlign.center,
                                   ),
-                                  SizedBox(height: 10),
-                                  // tryAgainButton()
-                                  InkWell(
-                                      onTap: createData,
-                                      child:Container(
-                                        width: MediaQuery.of(context).size.width,
-                                        padding: EdgeInsets.symmetric(vertical: 15),
-                                        margin: EdgeInsets.only(top: 10),
-                                        alignment: Alignment.center,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.all(Radius.circular(5)),
-                                          border: Border.all(color: Colors.black, width: 2),
-                                        ),
-                                        child: Text(
-                                          //'Selesai',
-                                          'Submit Registration Data',
-                                          style: TextStyle(fontSize: 20, color: Colors.black),
-                                        ),
-                                      )
-                                  )
+                                  // SizedBox(height: 5),
+                                  tryAgainButton()
                                 ],
                               ):Container())) : Container())
                           ),
